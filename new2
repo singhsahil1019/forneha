@@ -1,0 +1,39 @@
+// Add this code to your theme's functions.php file or a custom plugin
+function check_translated_product_shortcode($atts) {
+    // Shortcode attributes
+    $atts = shortcode_atts(
+        array(
+            'id' => 0, // Default product ID is 0
+        ),
+        $atts,
+        'check_translated_product'
+    );
+
+    $original_product_id = intval($atts['id']);
+
+    if (!$original_product_id) {
+        return 'Product ID is required.';
+    }
+
+    // Get the current language code
+    $current_language = ICL_LANGUAGE_CODE;
+
+    // Get the translated product ID for the current language
+    $translated_product_id = apply_filters('wpml_object_id', $original_product_id, 'product', FALSE, $current_language);
+
+    if ($translated_product_id) {
+        // Check if the translated product exists
+        $product = wc_get_product($translated_product_id);
+        
+        if ($product && $product->get_id()) {
+            return 'The translated product exists in the current language.';
+        } else {
+            return 'The translated product does not exist or is out of stock.';
+        }
+    } else {
+        return 'No translated product found for the current language.';
+    }
+}
+
+// Register the shortcode with WordPress
+add_shortcode('check_translated_product', 'check_translated_product_shortcode');
