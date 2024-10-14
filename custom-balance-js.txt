@@ -1,0 +1,33 @@
+jQuery(document).ready(function($) {
+    // Add 'active' class to the first navigation item
+   // $('.tab-list li:first-child, .tab-list .taxonomy-term:first-child').addClass('active');
+    $('.tab-list > ul > li:first-child').addClass('active');
+
+    $('.tab-list').on('click', 'li, .taxonomy-term', function() {
+        // Remove active class from all items and add to the clicked item
+        $('.tab-list li, .tab-list .taxonomy-term').removeClass('active');
+        $(this).addClass('active');
+
+        var postId = $(this).data('tab');
+        var termId = $(this).data('term');
+
+        // Determine if a taxonomy term or post was clicked
+        var action = termId ? 'load_term_content' : 'load_tab_content';
+        var idToLoad = termId ? termId : postId;
+
+        $.ajax({
+            url: ajax_object.ajax_url,
+            type: 'POST',
+            data: {
+                action: action,
+                id: idToLoad
+            },
+            success: function(response) {
+                $('#content').html(response);
+            },
+            error: function() {
+                $('#content').html('<p>Error loading content.</p>');
+            }
+        });
+    });
+});
