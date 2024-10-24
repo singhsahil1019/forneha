@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Newsletter Subscription</title>
+    
+    <!-- jQuery (You can remove this if your theme already loads it) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+    <!-- Newsletter Form -->
+    <form id="newsletter-form" method="POST">
+        <label for="email">Subscribe to our newsletter:</label><br>
+        <input type="email" name="email" id="email" placeholder="Enter your email" required>
+        <button type="submit">Subscribe</button>
+        <div id="response-message"></div> <!-- Response will show here -->
+    </form>
+
+    <!-- AJAX Script to Handle Form Submission -->
+    <script>
+    jQuery(document).ready(function($) {
+        $('#newsletter-form').on('submit', function(e) {
+            e.preventDefault(); // Prevent default form submission
+
+            var email = $('#email').val(); // Get email input value
+
+            $.ajax({
+                type: 'POST',
+                url: ajaxurl, // WordPress AJAX handler URL (injected in wp_head)
+                data: {
+                    action: 'newsletter_subscribe', // Custom action hook
+                    email: email
+                },
+                success: function(response) {
+                    // Check if success or error, based on the returned JSON data
+                    if(response.success) {
+                        $('#response-message').html('<p style="color:green;">' + response.data + '</p>');
+                    } else {
+                        $('#response-message').html('<p style="color:red;">' + response.data + '</p>');
+                    }
+                },
+                error: function() {
+                    $('#response-message').html('<p style="color:red;">There was an error. Please try again.</p>');
+                }
+            });
+        });
+    });
+    </script>
+
+    <!-- WordPress will inject this into the page via wp_head -->
+    <script type="text/javascript">
+        var ajaxurl = "<?php echo admin_url('admin-ajax.php'); ?>";
+    </script>
+
+</body>
+</html>
