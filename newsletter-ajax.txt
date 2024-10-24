@@ -1,0 +1,20 @@
+// Add action for both logged-in and non-logged-in users
+add_action('wp_ajax_newsletter_subscribe', 'handle_newsletter_subscription');
+add_action('wp_ajax_nopriv_newsletter_subscribe', 'handle_newsletter_subscription');
+
+function handle_newsletter_subscription() {
+    if (isset($_POST['email']) && !empty($_POST['email'])) {
+        $email = sanitize_email($_POST['email']);
+
+        if (is_email($email)) {
+            // Here you could store the email to a database or use a third-party API
+            wp_send_json_success('Thank you for subscribing!');
+        } else {
+            wp_send_json_error('Invalid email address.');
+        }
+    } else {
+        wp_send_json_error('Email is required.');
+    }
+
+    wp_die(); // Properly end the request
+}
