@@ -100,3 +100,37 @@ function enqueue_custom_scripts() {
     }
 }
 add_action('wp_enqueue_scripts', 'enqueue_custom_scripts');
+
+
+
+
+
+
+
+
+
+jQuery(document).ready(function($) {
+    // Target password-related forms
+    $('form').each(function() {
+        var $form = $(this);
+        var $passwordField1 = $form.find('input[name="password_1"], input[name="password"], input[name="password[1]"]');
+        var $passwordField2 = $form.find('input[name="password_2"], input[name="password[2]"]');
+        var $submitButton = $form.find('input[type="submit"], button[type="submit"]');
+
+        if ($passwordField1.length && $passwordField2.length) {
+            $form.on('submit', function(event) {
+                // Enable the submit button
+                $submitButton.prop('disabled', false);
+
+                // Check if either password field is empty
+                if (!$passwordField1.val() || !$passwordField2.val()) {
+                    event.preventDefault(); // Prevent form submission
+                    alert("Both password fields are required.");
+                } else if ($passwordField1.val() !== $passwordField2.val()) {
+                    event.preventDefault(); // Prevent form submission
+                    alert("Passwords do not match.");
+                }
+            });
+        }
+    });
+});
