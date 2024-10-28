@@ -56,3 +56,47 @@ function validate_custom_password($password, $password_confirm, $errors) {
         $errors->add('password_no_number', __('Password must contain at least one number.', 'woocommerce'));
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Disable WooCommerce password strength meter script
+add_action('wp_print_scripts', 'disable_password_strength_meter', 100);
+
+function disable_password_strength_meter() {
+    if (wp_script_is('wc-password-strength-meter', 'enqueued')) {
+        wp_dequeue_script('wc-password-strength-meter');
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+function enqueue_custom_scripts() {
+    // Only enqueue on WooCommerce pages
+    if (is_account_page() || is_wc_endpoint_url('lost-password') || is_wc_endpoint_url('edit-account')) {
+        // Enqueue jQuery
+        wp_enqueue_script('jquery');
+
+        // Enqueue your custom jQuery validation script
+        wp_enqueue_script('custom-password-validation', get_stylesheet_directory_uri() . '/custom-password-validation.js', array('jquery'), null, true);
+    }
+}
+add_action('wp_enqueue_scripts', 'enqueue_custom_scripts');
