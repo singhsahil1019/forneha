@@ -1,0 +1,58 @@
+// 1. Custom Password Validation on Password Reset and New User Account Setup Page
+add_action('woocommerce_after_reset_password_form', 'custom_password_validation', 10, 1);
+add_action('validate_password_reset', 'custom_password_validation', 10, 2);
+
+// 2. Custom Password Validation on Registration Page
+add_filter('woocommerce_registration_errors', 'custom_password_validation_on_registration', 10, 3);
+
+// 3. Custom Password Validation on My Account Page
+add_action('woocommerce_save_account_details_errors', 'custom_password_validation_on_account_page', 10, 2);
+
+function custom_password_validation($errors, $user = null) {
+    $password = isset($_POST['password_1']) ? $_POST['password_1'] : '';
+    $password_confirm = isset($_POST['password_2']) ? $_POST['password_2'] : '';
+    validate_custom_password($password, $password_confirm, $errors);
+}
+
+function custom_password_validation_on_registration($errors, $username, $email) {
+    $password = isset($_POST['password']) ? $_POST['password'] : '';
+    $password_confirm = isset($_POST['password_2']) ? $_POST['password_2'] : '';
+    validate_custom_password($password, $password_confirm, $errors);
+    return $errors;
+}
+
+function custom_password_validation_on_account_page($errors, $user) {
+    $password = isset($_POST['password_1']) ? $_POST['password_1'] : '';
+    $password_confirm = isset($_POST['password_2']) ? $_POST['password_2'] : '';
+    validate_custom_password($password, $password_confirm, $errors);
+}
+
+// 4. Shared Validation Function for Consistency
+function validate_custom_password($password, $password_confirm, $errors) {
+    // Check if password fields are empty
+    if (empty($password) || empty($password_confirm)) {
+        $errors->add('password_empty', __('Both password fields are required.', 'woocommerce'));
+        return;
+    }
+
+    // Check if passwords match
+    if ($password !== $password_confirm) {
+        $errors->add('password_mismatch', __('Passwords do not match.', 'woocommerce'));
+        return;
+    }
+
+    // Example rule: Minimum length of 8 characters
+    if (strlen($password) < 8) {
+        $errors->add('password_too_short', __('Password must be at least 8 characters long.', 'woocommerce'));
+    }
+
+    // Example rule: Require at least one uppercase letter
+    if (!preg_match('/[A-Z]/', $password)) {
+        $errors->add('password_no_upper', __('Password must contain at least one uppercase letter.', 'woocommerce'));
+    }
+
+    // Example rule: Require at least one number
+    if (!preg_match('/[0-9]/', $password)) {
+        $errors->add('password_no_number', __('Password must contain at least one number.', 'woocommerce'));
+    }
+}
