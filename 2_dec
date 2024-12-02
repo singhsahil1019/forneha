@@ -1,0 +1,247 @@
+[12/2, 9:29 AM] Neha Pal: <?php
+function display_navigation_with_ajax() {
+    // Fetch all categories
+    $categories = get_terms([
+        'taxonomy'   => 'category',
+        'orderby'    => 'name',
+        'order'      => 'ASC',
+        'hide_empty' => false,
+    ]);
+
+    if ($categories) {
+        echo '<div class="navigation-wrapper">';
+        
+        // Left side navigation menu
+        echo '<div class="navigation-menu">';
+        foreach ($categories as $category) {
+            echo '<div class="category-section">';
+            echo '<h3>' . esc_html($category->name) . '</h3>';
+            
+            $posts = new WP_Query([
+                'post_type'      => 'post',
+                'orderby'        => 'menu_order',
+                'order'          => 'ASC',
+                'posts_per_page' => -1,
+                'tax_query'      => [
+                    [
+                        'taxonomy' => 'category',
+                        'field'    => 'term_id',
+                        'terms'    => $category->term_id,
+                    ],
+                ],
+            ]);
+
+            if ($posts->have_posts()) {
+                echo '<ul class="category-posts">';
+                $first_post = null;
+                while ($posts->have_posts()) {
+                    $posts->the_post();
+                    echo '<li><a href="#" class="post-title" data-post-id="' . get_the_ID() . '">' . get_the_title() . '</a></li>';
+                    
+                    // Get the first post ID in this category
+                    if (!$first_post) {
+                        $first_post = get_the_ID();
+                    }
+                }
+                echo '</ul>';
+
+                // Automatically load the first post's content
+                if ($first_post) {
+                    $first_post_content = get_post($first_post)->post_content;
+                    echo '<div id="post-content-display" class="post-content-display">';
+                    echo wpautop($first_post_content); // Show the first post content
+                    echo '</div>';
+                }
+            }
+
+            wp_reset_postdata();
+
+            echo '</div>';
+        }
+        echo '</div>'; // Close navigation-menu
+
+        echo '</div>'; // Close navigation-wrapper
+    }
+}
+[12/2, 9:29 AM] Neha Pal: <?php display_navigation_with_ajax(); ?>
+[12/2, 9:29 AM] Neha Pal: function enqueue_navigation_scripts() {
+    wp_enqueue_script('navigation-ajax', get_template_directory_uri() . '/js/navigation-ajax.js', ['jquery'], null, true);
+
+    // Localize the AJAX URL for use in JavaScript
+    wp_localize_script('navigation-ajax', 'ajaxParams', [
+        'ajaxUrl' => admin_url('admin-ajax.php'),
+    ]);
+}
+add_action('wp_enqueue_scripts', 'enqueue_navigation_scripts');
+[12/2, 9:29 AM] Neha Pal: jQuery(document).ready(function ($) {
+    // Ensure that the first post's content is displayed on page load
+    var firstPostId = $('.post-title').first().data('post-id');
+    loadPostContent(firstPostId);
+
+    // Click event for other posts
+    $('.post-title').on('click', function (e) {
+        e.preventDefault();
+
+        var postId = $(this).data('post-id');
+        loadPostContent(postId);
+    });
+
+    // Function to load post content via AJAX
+    function loadPostContent(postId) {
+        $.ajax({
+            url: ajaxParams.ajaxUrl,
+            type: 'POST',
+            data: {
+                action: 'fetch_post_content',
+                post_id: postId,
+            },
+            beforeSend: function () {
+                $('#post-content-display').html('<p>Loading...</p>');
+            },
+            success: function (response) {
+                if (response.success) {
+                    $('#post-content-display').html(response.data.content);
+                } else {
+                    $('#post-content-display').html('<p>Failed to load content.</p>');
+                }
+            },
+            error: function () {
+                $('#post-content-display').html('<p>Error occurred. Please try again.</p>');
+            },
+        });
+    }
+});
+[12/2, 9:29 AM] Neha Pal: function fetch_post_content() {
+    // Check if post ID is provided
+    if (isset($_POST['post_id'])) {
+        $post_id = intval($_POST['post_id']);
+        $post = get_post($post_id);
+
+        if ($post) {
+            // Return the post content
+            wp_send_json_success([
+                'content' => wpautop($post->post_content),
+            ]);
+        } else {
+            wp_send_json_error(['message' => 'Post not found.']);
+        }
+    } else {
+        wp_send_json_error(['message' => 'Invalid request.']);
+    }
+
+    wp_die();
+}
+add_action('wp_ajax_fetch_post_content', 'fetch_post_content');
+add_action('wp_ajax_nopriv_fetch_post_content', 'fetch_post_content');
+[12/2, 9:29 AM] Neha Pal: /* Wrapper for navigation and content */
+.navigation-wrapper {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 20px;
+}
+
+/* Left side navigation menu */
+.navigation-menu {
+    width: 30%;
+    border: 2px solid #ddd;
+    padding: 20px;
+    border-radius: 10px;
+    background-color: #f9f9f9;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Category section styling */
+.category-section {
+    margin-bottom: 20px;
+}
+
+/* Category title */
+.category-section h3 {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+
+/* Post list under each category */
+.category-posts {
+    list-style: none;
+    padding: 0;
+}
+
+/* Individual post items */
+.category-posts li {
+    margin: 10px 0;
+}
+
+/* Styling for post links */
+.category-posts li a {
+    text-decoration: none;
+    font-size: 16px;
+    color: #0073aa;
+    transition: color 0.3s ease;
+}
+
+/* Hover effect for post titles */
+.category-posts li a:hover {
+    color: #005177;
+    text-decoration: underline;
+}
+
+/* Right side content box */
+.post-content-display {
+    width: 65%;
+    padding: 20px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    background-color: #fff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    min-height: 300px; /* Ensures content box has a minimum height */
+}
+
+/* Styling for loading text */
+.post-content-display p {
+    font-size: 16px;
+    color: #555;
+}
+
+/* Styling when no content is selected */
+.post-content-display p {
+    font-size: 18px;
+    color: #999;
+    text-align: center;
+    font-style: italic;
+}
+[12/2, 9:29 AM] Neha Pal: function create_custom_post_type() {
+    $args = array(
+        'labels' => array(
+            'name'               => 'Custom Posts',
+            'singular_name'      => 'Custom Post',
+            'menu_name'          => 'Custom Posts',
+            'add_new'            => 'Add New',
+            'add_new_item'       => 'Add New Custom Post',
+            'edit_item'          => 'Edit Custom Post',
+            'new_item'           => 'New Custom Post',
+            'view_item'          => 'View Custom Post',
+            'search_items'       => 'Search Custom Posts',
+            'not_found'          => 'No Custom Posts found',
+            'not_found_in_trash' => 'No Custom Posts found in Trash',
+            'all_items'          => 'All Custom Posts',
+        ),
+        'public'            => true,
+        'has_archive'       => true,
+        'supports'          => array( 'title', 'editor', 'thumbnail', 'custom-fields', 'revisions' ),
+        'hierarchical'      => false,
+        'menu_position'     => 5,
+        'show_in_rest'      => true,
+        'show_ui'           => true,
+        'rewrite'           => array( 'slug' => 'custom-posts' ),
+        'menu_icon'         => 'dashicons-format-post',
+        'supports'          => array( 'title', 'editor', 'author', 'thumbnail', 'excerpt', 'custom-fields', 'comments', 'page-attributes' ), // Add 'page-attributes' here
+    );
+    
+    register_post_type( 'custom_post', $args );
+}
+add_action( 'init', 'create_custom_post_type' );
