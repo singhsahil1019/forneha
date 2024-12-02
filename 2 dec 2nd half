@@ -1,0 +1,37 @@
+[12/2, 1:56 PM] Neha Pal: function order_posts_by_custom_field($query) {
+    // Check if we are in the admin area and it's the main query
+    if (is_admin() && $query->is_main_query() && $query->get('post_type') === 'post') {
+        // Set the order by your custom field
+        $query->set('meta_key', 'custom_order'); // Replace 'custom_order' with your custom field name
+        $query->set('orderby', 'meta_value_num'); // Use 'meta_value_num' for numeric values or 'meta_value' for strings
+        $query->set('order', 'ASC'); // Change to 'DESC' if needed
+    }
+}
+add_action('pre_get_posts', 'order_posts_by_custom_field');
+[12/2, 1:56 PM] Neha Pal: function add_custom_order_column($columns) {
+    $columns['custom_order'] = 'Custom Order';
+    return $columns;
+}
+add_filter('manage_post_posts_columns', 'add_custom_order_column');
+
+function show_custom_order_column($column, $post_id) {
+    if ($column === 'custom_order') {
+        echo get_post_meta($post_id, 'custom_order', true); // Replace 'custom_order' with your field
+    }
+}
+add_action('manage_post_posts_custom_column', 'show_custom_order_column', 10, 2);
+[12/2, 1:57 PM] Neha Pal: function make_custom_order_column_sortable($columns) {
+    $columns['custom_order'] = 'custom_order';
+    return $columns;
+}
+add_filter('manage_edit-post_sortable_columns', 'make_custom_order_column_sortable');
+
+function custom_order_sorting($query) {
+    if (!is_admin()) return;
+    $orderby = $query->get('orderby');
+    if ($orderby === 'custom_order') {
+        $query->set('meta_key', 'custom_order');
+        $query->set('orderby', 'meta_value_num');
+    }
+}
+add_action('pre_get_posts', 'custom_order_sorting');
