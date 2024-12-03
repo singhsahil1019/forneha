@@ -1,0 +1,93 @@
+// Enqueue JavaScript for Quick Edit
+function enqueue_custom_quickedit_script( $hook ) {
+    if ( $hook === 'edit.php' ) {
+        wp_enqueue_script( 'custom-quickedit', get_stylesheet_directory_uri() . '/assets/js/custom-quickedit.js', array( 'jquery' ), null, true );
+    }
+}
+add_action( 'admin_enqueue_scripts', 'enqueue_custom_quickedit_script' );
+
+// Register Custom Meta for Specific Post Types
+function register_custom_order_meta() {
+    register_post_meta( 'courses', 'custom_order', array(
+        'type' => 'number',
+        'single' => true,
+        'show_in_rest' => true,
+    ));
+    register_post_meta( 'wellbeing-treatment', 'custom_order', array(
+        'type' => 'number',
+        'single' => true,
+        'show_in_rest' => true,
+    ));
+    register_post_meta( 'hair-removal', 'custom_order', array(
+        'type' => 'number',
+        'single' => true,
+        'show_in_rest' => true,
+    ));
+}
+add_action( 'init', 'register_custom_order_meta' );
+
+// Add Custom Order Field to Quick Edit
+function add_custom_order_quickedit( $column_name, $post_type ) {
+    if ( in_array( $post_type, array( 'courses', 'wellbeing-treatment', 'hair-removal' ), true ) && $column_name === 'custom_order' ) {
+        ?>
+        <fieldset class="inline-edit-col-right">
+            <div class="inline-edit-col">
+                <label>
+                    <span class="title">Custom Order</span>
+                    <span class="input-text-wrap">
+                        <input type="number" name="custom_order" id="custom_order" value="" min="1">
+                    </span>
+                </label>
+            </div>
+        </fieldset>
+        <?php
+    }
+}
+add_action( 'quick_edit_custom_box', 'add_custom_order_quickedit', 10, 2 );
+
+// Add Custom Column to Post List
+function add_custom_order_column( $columns ) {
+    $columns['custom_order'] = 'Custom Order';
+    return $columns;
+}
+add_filter( 'courses_posts_columns', 'add_custom_order_column' );
+add_filter( 'manage_wellbeing-treatment_posts_columns', 'add_custom_order_column' );
+add_filter( 'manage_hair-removal_posts_columns', 'add_custom_order_column' );
+
+// Populate Custom Column
+function display_custom_order_column( $column_name, $post_id ) {
+    if ( $column_name === 'custom_order' ) {
+        echo get_post_meta( $post_id, 'custom_order', true );
+    }
+}
+add_action( 'manage_courses_posts_custom_column', 'display_custom_order_column', 10, 2 );
+add_action( 'manage_wellbeing-treatment_posts_custom_column', 'display_custom_order_column', 10, 2 );
+add_action( 'manage_hair-removal_posts_custom_column', 'display_custom_order_column', 10, 2 );
+
+// Save Quick Edit Data
+function save_custom_order_quickedit( $post_id ) {
+    if ( isset( $_POST['custom_order'] ) ) {
+		$custom_order = sanitize_text_field( $_POST['custom_order'] );
+        
+        // If the field is empty, delete the meta key
+        if ( $custom_order === '' ) {
+            delete_post_meta( $post_id, 'custom_order' );
+        } else {
+            update_post_meta( $post_id, 'custom_order', absint( $custom_order ) ); // Save non-negative integer
+        }
+    } 
+}
+add_action( 'save_post_courses', 'save_custom_order_quickedit' );
+add_action( 'save_post_wellbeing-treatment', 'save_custom_order_quickedit' );
+add_action( 'save_post_hair-removal', 'save_custom_order_quickedit' );
+
+// Add Hidden Fields for Quick Edit
+function add_hidden_custom_order_field( $column_name, $post_id ) {
+    if ( $column_name === 'custom_order' ) {
+        $custom_order = get_post_meta( $post_id, 'custom_order', true );
+        echo '<input type="hidden" id="hidden-custom-order-' . esc_attr( $post_id ) . '" value="' . esc_attr( $custom_order ) . '">';
+    }
+}
+add_action( 'manage_courses_posts_custom_column', 'add_hidden_custom_order_field', 10, 2 );
+add_action( 'manage_wellbeing-treatment_posts_custom_column', 'add_hidden_custom_order_field', 10, 2 );
+add_action( 'manage_hair-removal_posts_custom_column', 'add_hidden_custom_order_field', 10, 2 );

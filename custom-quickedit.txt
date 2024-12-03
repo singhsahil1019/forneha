@@ -1,0 +1,12 @@
+(function ($) {
+    $(document).on('click', '.editinline', function () {
+        // Get the post ID
+        const postId = $(this).closest('tr').attr('id').replace('post-', '');
+
+        // Get the custom order value from the hidden field
+        const customOrder = $('#hidden-custom-order-' + postId).val();
+
+        // Set the value in the Quick Edit field
+        $('input[name="custom_order"]').val(customOrder);
+    });
+})(jQuery);
