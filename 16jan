@@ -1,0 +1,90 @@
+[1/16, 9:25 AM] Neha Pal: function load_leaderboard_shortcode() {
+    if (!isset($_POST['quiz_id'])) {
+        wp_send_json_error(['message' => 'Quiz ID missing']);
+    }
+
+    $quiz_id = intval($_POST['quiz_id']);
+
+    // Generate the leaderboard content
+    $shortcode_content = do_shortcode('[quiz_leaderboard id="' . $quiz_id . '"]');
+
+    // Collect the plugin's inline scripts and styles (if any)
+    ob_start();
+    wp_enqueue_scripts(); // Ensure plugin's scripts are enqueued
+    do_action('wp_footer'); // Trigger any inline scripts added in the footer
+    $plugin_scripts = ob_get_clean();
+
+    wp_send_json_success([
+        'html' => $shortcode_content,
+        'scripts' => $plugin_scripts,
+    ]);
+}
+add_action('wp_ajax_load_leaderboard', 'load_leaderboard_shortcode');
+add_action('wp_ajax_nopriv_load_leaderboard', 'load_leaderboard_shortcode');
+[1/16, 9:25 AM] Neha Pal: jQuery(document).ready(function ($) {
+    $('.load-leaderboard-button').on('click', function () {
+        const quizId = $(this).data('quiz-id');
+
+        // Show loading message
+        $('#leaderboard-content').html('<p>Loading...</p>');
+        $('#leaderboard-popup').fadeIn();
+
+        // AJAX request to fetch the leaderboard
+        $.ajax({
+            url: ajax_object.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'load_leaderboard',
+                quiz_id: quizId,
+            },
+            success: function (response) {
+                if (response.success) {
+                    // Append the leaderboard content
+                    $('#leaderboard-content').html(response.data.html);
+
+                    // Append and execute returned scripts
+                    $('body').append(response.data.scripts);
+
+                    // Reinitialize DataTables.js or plugin-specific JS
+                    if ($.fn.DataTable) {
+                        $('#leaderboard-table').DataTable();
+                    }
+                } else {
+                    $('#leaderboard-content').html('<p>Error loading leaderboard.</p>');
+                }
+            },
+            error: function () {
+                $('#leaderboard-content').html('<p>AJAX error occurred.</p>');
+            },
+        });
+    });
+
+    // Close popup
+    $('#close-popup').on('click', function () {
+        $('#leaderboard-popup').fadeOut();
+    });
+});
+[1/16, 9:25 AM] Neha Pal: function load_leaderboard_shortcode() {
+    if (!isset($_POST['quiz_id'])) {
+        wp_send_json_error(['message' => 'Quiz ID missing']);
+    }
+
+    $quiz_id = intval($_POST['quiz_id']);
+
+    // Generate the leaderboard content
+    $shortcode_content = do_shortcode('[quiz_leaderboard id="' . $quiz_id . '"]');
+
+    // Explicitly enqueue plugin scripts and styles
+    wp_enqueue_script('plugin-datatables'); // Replace 'plugin-datatables' with the actual handle
+    wp_enqueue_style('plugin-datatables-css'); // Replace with the actual handle for CSS
+
+    // Capture any inline scripts added by the plugin
+    ob_start();
+    do_action('wp_footer'); // Ensures inline scripts are included
+    $plugin_scripts = ob_get_clean();
+
+    wp_send_json_success([
+        'html' => $shortcode_content,
+        'scripts' => $plugin_scripts,
+    ]);
+}
