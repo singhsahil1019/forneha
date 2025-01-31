@@ -1,0 +1,163 @@
+// Register the shortcode
+function custom_credit_card_shortcode_load_more($atts) {
+    // Set default attributes for the shortcode
+    $atts = shortcode_atts(array(
+        'posts_per_page' => 4,  // Number of posts to show initially
+    ), $atts, 'credit_card_list');
+
+    // Start output buffering
+    ob_start();
+
+    // Get the current page for the query (for AJAX)
+    $paged = (get_query_var('paged')) ? get_query_var('paged') : 1;
+
+    // Define query arguments
+    $args = array(
+        'post_type' => 'credit-card',  // Custom post type
+        'posts_per_page' => $atts['posts_per_page'],  // Limit posts per page
+        'paged' => $paged,  // For pagination
+    );
+
+    // Run the WP_Query
+    $query = new WP_Query($args);
+
+    if ($query->have_posts()) :
+        while ($query->have_posts()) : $query->the_post();
+            // Set the post ID using set_query_var() to pass it to the template
+            set_query_var('post_id', get_the_ID());
+
+            // Include the template file to render each post's content (including ACF fields)
+            include(get_template_directory() . '/inc/credit-card-loop-template.php');
+        endwhile;
+
+        // Output the "Load More" button
+        if ($query->max_num_pages > 1) :  // Show button only if there are more pages
+            echo '<button class="load-more" data-page="1" data-posts_per_page="' . $atts['posts_per_page'] . '" data-max_pages="' . $query->max_num_pages . '">Load More</button>';
+        endif;
+
+        // Reset post data
+        wp_reset_postdata();
+    else :
+        echo 'No credit cards found.';
+    endif;
+
+    // Return the content
+    return ob_get_clean();
+}
+
+// Register the shortcode
+add_shortcode('credit_card_list', 'custom_credit_card_shortcode_load_more');
+
+// Register the AJAX handler
+function load_more_posts() {
+    // Verify nonce for security
+    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'load_more_nonce')) {
+        die('Permission denied');
+    }
+
+    // Get the current page and posts_per_page from the AJAX request
+    $paged = isset($_POST['page']) ? $_POST['page'] + 1 : 1;  // Increment page number
+    $posts_per_page = isset($_POST['posts_per_page']) ? $_POST['posts_per_page'] : 4;
+
+    // Define query arguments
+    $args = array(
+        'post_type' => 'credit-card',  // Custom post type
+        'posts_per_page' => $posts_per_page,
+        'paged' => $paged,
+    );
+
+    // Run the WP_Query
+    $query = new WP_Query($args);
+
+    if ($query->have_posts()) :
+        while ($query->have_posts()) : $query->the_post();
+            // Include the loop template for each post (or any other content you want to display)
+            include(get_template_directory() . '/inc/credit-card-loop-template.php');
+        endwhile;
+
+        // If there are more pages, show the "Load More" button again
+        if ($paged < $query->max_num_pages) :
+            echo '<button class="load-more" data-page="' . $paged . '" data-posts_per_page="' . $posts_per_page . '" data-max_pages="' . $query->max_num_pages . '">Load More</button>';
+        endif;
+
+        wp_reset_postdata();
+    } else {
+        echo 'No more posts to load.';
+    }
+
+    die();  // End the function
+}
+
+add_action('wp_ajax_load_more_posts', 'load_more_posts'); // For logged-in users
+add_action('wp_ajax_nopriv_load_more_posts', 'load_more_posts'); // For non-logged-in users
+
+
+---------------------------------------------------------------------------------------------------------
+
+credit-card-loop-template.php
+
+<?php
+// Access the post ID passed via set_query_var()
+$post_id = get_query_var('post_id');
+
+// Fetch ACF fields for the current post
+$credit_card_number = get_field('credit_card_number', $post_id);
+$credit_card_expiry = get_field('credit_card_expiry', $post_id);
+$credit_card_type = get_field('credit_card_type', $post_id);
+
+// You can fetch any other ACF fields as needed
+?>
+
+<div class="credit-card-item">
+    <h2><?php echo get_the_title($post_id); ?></h2>
+    <p>Card Number: <?php echo esc_html($credit_card_number); ?></p>
+    <p>Expiry: <?php echo esc_html($credit_card_expiry); ?></p>
+    <p>Card Type: <?php echo esc_html($credit_card_type); ?></p>
+    <p><?php echo get_the_content($post_id); ?></p>
+</div>
+
+
+---------------------------------------------------------------------------------------------------------------------
+
+jQuery(function($) {
+    // On clicking the "Load More" button
+    $('body').on('click', '.load-more', function() {
+        var button = $(this);  // Get the clicked button
+        var page = button.data('page');  // Get the current page number
+        var postsPerPage = button.data('posts_per_page');  // Get the number of posts per page
+        var maxPages = button.data('max_pages');  // Get the maximum number of pages
+        var nonce = loadMoreParams.nonce;  // Get the nonce from localized variables
+
+        // Show loading text while waiting for the AJAX response
+        button.text('Loading...');
+
+        // Send the AJAX request
+        $.ajax({
+            url: loadMoreParams.ajaxurl,  // WordPress AJAX URL
+            type: 'POST',
+            data: {
+                action: 'load_more_posts',  // The action hooked to AJAX in WordPress
+                nonce: nonce,  // Security nonce
+                page: page,  // Current page
+                posts_per_page: postsPerPage  // Number of posts per page
+            },
+            success: function(response) {
+                // If there are posts, append them before the "Load More" button
+                button.parent().before(response);
+
+                // Update the data-page attribute to the next page
+                button.data('page', page + 1);
+
+                // If there are no more pages, hide the "Load More" button
+                if (page + 1 >= maxPages) {
+                    button.remove();  // Remove the button if there are no more posts to load
+                } else {
+                    button.text('Load More');  // Change the text back to "Load More"
+                }
+            },
+            error: function() {
+                button.text('Error. Try again!');  // In case of error, show an error message
+            }
+        });
+    });
+});
